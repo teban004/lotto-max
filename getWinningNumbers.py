@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import logging
 import psycopg2
 from psycopg2 import Error
+import configparser
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,6 +61,34 @@ def scrape_page(url):
         logger.error(f'An error occurred: {e}')
         return None
 
+
+def read_db_config(filename='config.ini', section='postgresql'):
+    """ Read database configuration from a file """
+    parser = configparser.ConfigParser()
+    parser.read(filename)
+
+    # Get section, default to postgresql
+    db_config = {}
+    if parser.has_section(section):
+        params = parser.items(section)
+        for param in params:
+            db_config[param[0]] = param[1]
+    else:
+        raise Exception(f'Section {section} not found in the {filename} file')
+
+    return db_config
+
+
+def connect_to_database(db_config):
+    """ Connect to the PostgreSQL database """
+    try:
+        conn = psycopg2.connect(**db_config)
+        return conn
+    except (Exception, Error) as error:
+        print(f"Error while connecting to PostgreSQL: {error}")
+        return None
+
+
 if __name__ == '__main__':
     # URL of the OLG Lotto Max past results page
     url = "https://www.olg.ca/en/lottery/play-lotto-max-encore/past-results.html"
@@ -67,5 +96,6 @@ if __name__ == '__main__':
     content = scrape_page(url)
     if content:
         print(content)
+        conn = connect_to_database()
     else:
         logger.error('Failed to scrape the page')
