@@ -88,8 +88,7 @@ def connect_to_database(db_config):
         print(f"Error while connecting to PostgreSQL: {error}")
         return None
 
-
-if __name__ == '__main__':
+def main():
     # URL of the OLG Lotto Max past results page
     url = "https://www.olg.ca/en/lottery/play-lotto-max-encore/past-results.html"
 
@@ -99,3 +98,20 @@ if __name__ == '__main__':
         conn = connect_to_database()
     else:
         logger.error('Failed to scrape the page')
+
+    try:
+        # Read database configuration from config file
+        db_config = read_db_config()
+
+        # Connect to the database
+        conn = connect_to_database(db_config)
+        if conn is None:
+            return
+        
+        # Close database connection
+        conn.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
