@@ -88,14 +88,40 @@ def connect_to_database(db_config):
         print(f"Error while connecting to PostgreSQL: {error}")
         return None
 
+def check_if_row_exists(conn, check_date):
+    """ Check if a row with the given date exists in the table """
+    try:
+        cursor = conn.cursor()
+        query = "SELECT COUNT(*) FROM lotto_max_results WHERE draw_date = %s"
+        cursor.execute(query, (check_date,))
+        count = cursor.fetchone()[0]
+        cursor.close()
+        return count > 0
+    except (Exception, Error) as error:
+        print(f"Error checking if row exists: {error}")
+        return False
+
+def insert_row_if_not_exists(conn, insert_date, other_values):
+    """ Insert a row if it doesn't already exist """
+    try:
+        cursor = conn.cursor()
+        insert_query = "INSERT INTO lotto_max_results (draw_date, number1, number2, number3, number4, number5, number6, number7, bonus_number) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        cursor.execute(insert_query, (insert_date, other_values[0], other_values[1], other_values[2], other_values[3], other_values[4], other_values[5], other_values[6], other_values[7]))
+        conn.commit()
+        cursor.close()
+        print("Row inserted successfully.")
+    except (Exception, Error) as error:
+        conn.rollback()
+        print(f"Error inserting row: {error}")
+
 def main():
     # URL of the OLG Lotto Max past results page
     url = "https://www.olg.ca/en/lottery/play-lotto-max-encore/past-results.html"
 
-    content = scrape_page(url)
-    if content:
-        print(content)
-        conn = connect_to_database()
+    draw_date, winning_numbers = scrape_page(url)
+    if draw_date:
+        print(draw_date)
+        print(winning_numbers)
     else:
         logger.error('Failed to scrape the page')
 
@@ -107,9 +133,14 @@ def main():
         conn = connect_to_database(db_config)
         if conn is None:
             return
-        
-        # Close database connection
-        conn.close()
+        try:
+            # Check if row exists
+            if not check_if_row_exists(conn, draw_date):
+                # Insert row if it doesn't exist
+                insert_row_if_not_exists(conn, draw_date, winning_numbers)
+        finally:
+            # Close database connection
+            conn.close()
     except Exception as e:
         print(f"Error: {e}")
 
