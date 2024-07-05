@@ -17,7 +17,7 @@ def scrape_page(url):
     try:
         with sync_playwright() as p:
             # Step 1: Launch the browser with Chromium
-            browser = p.chromium.launch(headless=True, executable_path='/usr/bin/chromium-browser')
+            browser = p.chromium.launch(headless=True, executable_path='/usr/bin/chromium')
             page = browser.new_page()
 
             # Step 2: Fetch the web page content
