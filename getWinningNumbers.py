@@ -8,7 +8,7 @@ import configparser
 
 logging.basicConfig(filename='logs/lotto-max.log',
                     filemode='a',
-                    format='%(asctime)s;%(levelname)s; %(message)s',
+                    format='%(asctime)s; %(levelname)s; %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ def scrape_page(url):
         return None
 
 
-def read_db_config(filename='config.ini', section='postgresql'):
+def read_db_config(filename='~/programacion/lotto-max/config.ini', section='postgresql'):
     """ Read database configuration from a file """
     parser = configparser.ConfigParser()
     parser.read(filename)
