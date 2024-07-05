@@ -10,7 +10,7 @@ logging.basicConfig(filename='logs/lotto-max.log',
                     filemode='a',
                     format='%(asctime)s;%(levelname)s; %(message)s',
                     datefmt='%H:%M:%S',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def scrape_page(url):
@@ -41,7 +41,7 @@ def scrape_page(url):
             # Step 7: Find the section you want to scrape
             date_section = soup.find('p', {'class': 'current-result-date'})
             if date_section is None:
-                logger.error(f'Section with id "main-content" not found')
+                logger.error(f'Section with class="current-result-date" not found')
                 return None
 
             # Step 8: Extract the desired data
@@ -54,11 +54,12 @@ def scrape_page(url):
             winning_numbers_html = numbers_section.find_all('div', {'class': 'ball-number'})
             if not winning_numbers_html:
                 raise ValueError("Couldn't find the winning numbers on the page.")
-            logger.info(f"Winning numbers:")
             winning_numbers = list()
             for winning_num in winning_numbers_html:
                 logger.info(f"{winning_num.get_text().strip()}")
                 winning_numbers.append(winning_num.get_text().strip())
+            logger.info(f"Winning numbers:", winning_numbers)
+
             return date_object.strftime('%Y-%m-%d'), winning_numbers
 
     except Exception as e:
@@ -89,7 +90,7 @@ def connect_to_database(db_config):
         conn = psycopg2.connect(**db_config)
         return conn
     except (Exception, Error) as error:
-        print(f"Error while connecting to PostgreSQL: {error}")
+        logger.error(f"Error while connecting to PostgreSQL: {error}")
         return None
 
 def check_if_row_exists(conn, check_date):
@@ -102,7 +103,7 @@ def check_if_row_exists(conn, check_date):
         cursor.close()
         return count > 0
     except (Exception, Error) as error:
-        print(f"Error checking if row exists: {error}")
+        logger.error(f"Error checking if row exists: {error}")
         return False
 
 def insert_row_if_not_exists(conn, insert_date, other_values):
@@ -112,21 +113,21 @@ def insert_row_if_not_exists(conn, insert_date, other_values):
         insert_query = "INSERT INTO lotto_max_results (draw_date, number1, number2, number3, number4, number5, number6, number7, bonus_number) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
         cursor.execute(insert_query, (insert_date, other_values[0], other_values[1], other_values[2], other_values[3], other_values[4], other_values[5], other_values[6], other_values[7]))
         conn.commit()
+        if cursor.rowcount > 0:
+            logger.info("Numbers inserted into the db successfully.")
+        else:
+            logger.info("No rows were inserted into the db.")
         cursor.close()
-        print("Row inserted successfully.")
     except (Exception, Error) as error:
         conn.rollback()
-        print(f"Error inserting row: {error}")
+        logger.error(f"Error inserting row: {error}")
 
 def main():
     # URL of the OLG Lotto Max past results page
     url = "https://www.olg.ca/en/lottery/play-lotto-max-encore/past-results.html"
 
     draw_date, winning_numbers = scrape_page(url)
-    if draw_date:
-        print(draw_date)
-        print(winning_numbers)
-    else:
+    if not draw_date:
         logger.error('Failed to scrape the page')
 
     try:
@@ -146,7 +147,7 @@ def main():
             # Close database connection
             conn.close()
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
 
 if __name__ == "__main__":
     main()
