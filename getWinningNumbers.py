@@ -6,7 +6,11 @@ import psycopg2
 from psycopg2 import Error
 import configparser
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(filename='logs/lotto-max.log',
+                    filemode='a',
+                    format='%(asctime)s;%(levelname)s; %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def scrape_page(url):
