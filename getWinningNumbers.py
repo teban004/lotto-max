@@ -66,7 +66,7 @@ def scrape_page(url):
         return None
 
 
-def read_db_config(filename='config.ini', section='postgresql'):
+def read_db_config(filename='programacion/lotto-max/config.ini', section='postgresql'):
     """ Read database configuration from a file """
     parser = configparser.ConfigParser()
     parser.read(filename)
