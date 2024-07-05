@@ -56,9 +56,8 @@ def scrape_page(url):
                 raise ValueError("Couldn't find the winning numbers on the page.")
             winning_numbers = list()
             for winning_num in winning_numbers_html:
-                logger.info(f"{winning_num.get_text().strip()}")
                 winning_numbers.append(winning_num.get_text().strip())
-            logger.info(f"Winning numbers:", winning_numbers)
+            logger.info(f"Winning numbers: {winning_numbers}")
 
             return date_object.strftime('%Y-%m-%d'), winning_numbers
 
@@ -67,7 +66,7 @@ def scrape_page(url):
         return None
 
 
-def read_db_config(filename='~/programacion/lotto-max/config.ini', section='postgresql'):
+def read_db_config(filename='config.ini', section='postgresql'):
     """ Read database configuration from a file """
     parser = configparser.ConfigParser()
     parser.read(filename)
