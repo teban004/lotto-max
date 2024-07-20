@@ -6,13 +6,19 @@
   
   .draw {
     margin-bottom: 20px;
-    border: 1px solid #52a1a1;
+    border: 2px solid #164a86;
     padding: 15px;
+    width: 90%;
+    max-width: 600px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
   }
   
   .numbers {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   
   .number {
@@ -35,3 +41,10 @@
     background-color: #acb20c;
   }
   
+  @media (max-width: 600px) {
+    .number {
+      width: 30px;
+      height: 30px;
+      font-size: 1em;
+    }
+  }
