@@ -48,6 +48,7 @@ const App = () => {
             </header>
             <main>
                 <Routes>
+                    <Route path="/winning-numbers" element={<WinningNumbers allDraws={winningNumbers} />} />
                     <Route path="/" element={<WinningNumbers allDraws={winningNumbers} />} />
                     <Route path="/number-pool" element={<NumberPool allDraws={winningNumbers} />} />
                 </Routes>
