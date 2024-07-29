@@ -1,55 +1,39 @@
-import React, { useEffect, useState } from 'react';
+  import React, { useEffect, useState } from 'react';
 import './NumberPool.css';
 
-const NumberPool = ({ allDraws }) => {
+const NumberPool = () => {
   const [numberStats, setNumberStats] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const calculateNumberStats = () => {
-        const numberMap = new Map();
-
-        allDraws.forEach((draw, drawIndex) => {
-        const numbers = [
-            draw.number1,
-            draw.number2,
-            draw.number3,
-            draw.number4,
-            draw.number5,
-            draw.number6,
-            draw.number7,
-            draw.bonus_number,
-        ];
-
-        numbers.forEach((number) => {
-            if (!numberMap.has(number)) {
-            numberMap.set(number, {
-                frequency: 0,
-                lastAppearance: drawIndex,
-            });
-            }
-            const numStats = numberMap.get(number);
-            numStats.frequency += 1;
-            numStats.lastAppearance = drawIndex;
-        });
-        });
-
-        const statsArray = Array.from(numberMap, ([number, stats]) => ({
-        number,
-        ...stats,
-        }));
-
-        statsArray.sort((a, b) => {
-        if (a.frequency === b.frequency) {
-            return a.lastAppearance - b.lastAppearance;
+    const fetchNumberStats = async () => {
+      try {
+        const statsArray = [];
+        for (let number = 1; number <= 50; number++) {
+          const response = await fetch(`http://estebanarrangoiz.com:5000/api/stats/${number}`);
+          if (!response.ok) {
+            throw new Error(`Error fetching stats for number ${number}`);
+          }
+          const data = await response.json();
+          statsArray.push({
+            number,
+            frequency: parseInt(data.freq, 10),
+          });
         }
-        return b.frequency - a.frequency;
-        });
+
+        // Sort the statsArray by frequency (descending)
+        statsArray.sort((a, b) => b.frequency - a.frequency);
 
         setNumberStats(statsArray);
+      } catch (error) {
+        console.error("Error fetching number stats:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    calculateNumberStats();
-  }, [allDraws]);
+    fetchNumberStats();
+  }, []);
 
   const getColorForFrequency = (frequency) => {
     // Normalize frequency to a value between 0 and 1
@@ -96,7 +80,6 @@ const NumberPool = ({ allDraws }) => {
           <tr>
             <th>Number</th>
             <th>Frequency</th>
-            <th>Last Appearance</th>
           </tr>
         </thead>
         <tbody>
@@ -104,7 +87,6 @@ const NumberPool = ({ allDraws }) => {
             <tr key={numStat.number} style={{ backgroundColor: getColorForFrequency(numStat.frequency) }}>
               <td className={'number'}>{numStat.number}</td>
               <td>{numStat.frequency}</td>
-              <td>{numStat.lastAppearance}</td>
             </tr>
           ))}
         </tbody>

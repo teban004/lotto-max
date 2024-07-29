@@ -12,7 +12,7 @@ const App = () => {
     useEffect(() => {
         const fetchWinningNumbers = async () => {
         try {
-            const response = await fetch('https://estebanarrangoiz.com:5000/api/winning-numbers'); // Changed to relative path for better security
+            const response = await fetch('http://estebanarrangoiz.com:5000/api/winning-numbers'); // Changed to relative path for better security
             if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -50,7 +50,7 @@ const App = () => {
                 <Routes>
                     <Route path="/winning-numbers" element={<WinningNumbers allDraws={winningNumbers} />} />
                     <Route path="/" element={<WinningNumbers allDraws={winningNumbers} />} />
-                    <Route path="/number-pool" element={<NumberPool allDraws={winningNumbers} />} />
+                    <Route path="/number-pool" element={<NumberPool />} />
                 </Routes>
             </main>
             </div>
