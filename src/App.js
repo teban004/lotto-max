@@ -12,7 +12,7 @@ const App = () => {
     useEffect(() => {
         const fetchWinningNumbers = async () => {
         try {
-            const response = await fetch('http://estebanarrangoiz.com:5000/api/winning-numbers'); // Changed to relative path for better security
+            const response = await fetch('https://estebanarrangoiz.com:5000/api/winning-numbers'); // Changed to relative path for better security
             if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -37,7 +37,7 @@ const App = () => {
     }
 
     return (
-        <Router>
+        <Router basename="/lotto-max">
             <div className="App">
             <header className="App-header">
                 <h1>Lotto Max Winning Numbers</h1>
