@@ -24,16 +24,48 @@
     color: white;
   }  
  
-  .high-frequency {
-    background-color: #ffcccc;
+  .frequency9 {
+    background-color: #00ff00;
   }
   
-  .medium-frequency {
-    background-color: #ffe680;
+  .frequency8 {
+    background-color: #24be24;
   }
   
-  .low-frequency {
-    background-color: #ccffcc;
+  .frequency7 {
+    background-color: #90e26f;
+  }
+  
+  .frequency6 {
+    background-color: #c0e657;
+  }
+  
+  .frequency5 {
+    background-color: #e2d16f;
+  }
+  
+  .frequency4 {
+    background-color: #e7a516;
+  }
+  
+  .frequency3 {
+    background-color: #d47f1e;
+  }
+  
+  .frequency2 {
+    background-color: #db7704;
+  }
+  
+  .frequency1 {
+    background-color: #e77528;
+  }
+  
+  .frequency0 {
+    background-color: #f74904;
+  }
+  
+  .unrated {
+    background-color: #9b9b9b;
   }
   
   @media (max-width: 600px) {

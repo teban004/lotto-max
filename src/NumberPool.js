@@ -2,48 +2,38 @@
 import './NumberPool.css';
 
 const NumberPool = () => {
-  const [numberStats, setNumberStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+    const [numberStats, setNumberStats] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchNumberStats = async () => {
-      try {
-        const statsArray = [];
-        for (let number = 1; number <= 50; number++) {
-          const response = await fetch(`http://estebanarrangoiz.com:5000/api/stats/${number}`);
-          if (!response.ok) {
-            throw new Error(`Error fetching stats for number ${number}`);
-          }
-          const data = await response.json();
-          statsArray.push({
-            number,
-            frequency: parseInt(data.freq, 10),
-          });
+    useEffect(() => {
+        const fetchNumberStats = async () => {
+        try {
+            const response = await fetch(`http://estebanarrangoiz.com:5000/api/stats/`);
+            if (!response.ok) {
+                throw new Error(`Error fetching stats for numbers`);
+            }
+            const data = await response.json();
+            let statsArray = data;
+
+            setNumberStats(statsArray);
+        } catch (error) {
+            console.error("Error fetching numbers stats:", error);
+        } finally {
+            setLoading(false);
         }
+        };
 
-        // Sort the statsArray by frequency (descending)
-        statsArray.sort((a, b) => b.frequency - a.frequency);
-
-        setNumberStats(statsArray);
-      } catch (error) {
-        console.error("Error fetching number stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNumberStats();
+        fetchNumberStats();
   }, []);
 
-  const getColorForFrequency = (frequency) => {
+  const getColorForCount = (count) => {
     // Normalize frequency to a value between 0 and 1
-    const maxFrequency = Math.max(...numberStats.map(stat => stat.frequency));
-    const normalized = frequency / maxFrequency;
+    const maxFrequency = Math.max(...numberStats.map(stat => stat.count));
+    const minFrequency = Math.min(...numberStats.map(stat => stat.count));
+    const normalized = (count-minFrequency) / (maxFrequency-minFrequency);
     const hue = (normalized) * 120; // 120 is green, 0 is red, and -60 is blue in HSL
 
-    // Convert hue to RGB
-    const [r, g, b] = hslToRgb(hue / 360, 1, 0.5);
-    return `rgb(${r}, ${g}, ${b})`;
+   return getRowClass(normalized);
   };
 
   // Convert HSL to RGB (Hue between 0-1, Saturation and Lightness between 0-1)
@@ -79,14 +69,16 @@ const NumberPool = () => {
         <thead>
           <tr>
             <th>Number</th>
-            <th>Frequency</th>
+            <th>Count</th>
+            <th>Last Ddraw Date</th>
           </tr>
         </thead>
         <tbody>
           {numberStats.map((numStat) => (
-            <tr key={numStat.number} style={{ backgroundColor: getColorForFrequency(numStat.frequency) }}>
+            <tr key={numStat.number} className={getColorForCount(numStat.count)}>
               <td className={'number'}>{numStat.number}</td>
-              <td>{numStat.frequency}</td>
+              <td>{numStat.count}</td>
+              <td>{numStat.last_draw_date.substring(0, 10)}</td>
             </tr>
           ))}
         </tbody>
@@ -95,13 +87,29 @@ const NumberPool = () => {
   );
 };
 
-const getRowClass = (numStat) => {
-    if (numStat.frequency > 2) {
-      return 'high-frequency';
-    } else if (numStat.frequency > 1) {
-      return 'medium-frequency';
+const getRowClass = (normalizedFreq) => {
+    if (normalizedFreq > 0.95) {
+      return 'frequency9';
+    } else if (normalizedFreq > 0.90) {
+      return 'frequency8';
+    } else if (normalizedFreq > 0.85) {
+      return 'frequency7';
+    } else if (normalizedFreq > 0.80) {
+      return 'frequency6';
+    } else if (normalizedFreq > 0.75) {
+      return 'frequency5';
+    } else if (normalizedFreq > 0.65) {
+      return 'frequency4';
+    } else if (normalizedFreq > 0.50) {
+      return 'frequency3';
+    } else if (normalizedFreq > 0.35) {
+      return 'frequency2';
+    } else if (normalizedFreq > 0.20) {
+      return 'frequency1';
+    } else if (normalizedFreq >= 0) {
+      return 'frequency0';
     } else {
-      return 'low-frequency';
+      return 'unrated';
     }
 };
 
