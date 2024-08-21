@@ -35,6 +35,22 @@ const WinningNumbers = ({ allDraws }) => {
       }
     }
 
+    if (drawIndex + 1 < allDraws.length) {
+      const nextWinningNumbers = [
+        allDraws[drawIndex + 1].number1,
+        allDraws[drawIndex + 1].number2,
+        allDraws[drawIndex + 1].number3,
+        allDraws[drawIndex + 1].number4,
+        allDraws[drawIndex + 1].number5,
+        allDraws[drawIndex + 1].number6,
+        allDraws[drawIndex + 1].number7,
+        allDraws[drawIndex + 1].bonus_number,
+      ];
+      if (nextWinningNumbers.includes(number)) {
+        isRepeated = true;
+      }
+    }
+
     winningNumbers.forEach((drawNumber) => {
       if (drawNumber === number + 1 || drawNumber === number - 1) {
         isConsecutive = true;
