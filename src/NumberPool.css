@@ -73,7 +73,10 @@
         width: 100%;
     }
     th, td {
-        padding: 8px;
+        padding: 4px;
+    }
+    .disposable {
+      display: none;
     }
 }
   

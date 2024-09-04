@@ -26,11 +26,11 @@ const NumberPool = () => {
         fetchNumberStats();
   }, []);
 
-  const getColorForCount = (count) => {
+  const getColorForCount = (hot_number) => {
     // Normalize frequency to a value between 0 and 1
-    const maxFrequency = Math.max(...numberStats.map(stat => stat.count));
-    const minFrequency = Math.min(...numberStats.map(stat => stat.count));
-    const normalized = (count-minFrequency) / (maxFrequency-minFrequency);
+    const maxFrequency = Math.max(...numberStats.map(stat => stat.hot_number));
+    const minFrequency = Math.min(...numberStats.map(stat => stat.hot_number));
+    const normalized = (hot_number-minFrequency) / (maxFrequency-minFrequency);
     const hue = (normalized) * 120; // 120 is green, 0 is red, and -60 is blue in HSL
 
    return getRowClass(normalized);
@@ -68,17 +68,23 @@ const NumberPool = () => {
       <table>
         <thead>
           <tr>
-            <th>Number</th>
-            <th>Count</th>
-            <th>Last Ddraw Date</th>
+            <th>Num</th>
+            <th className='disposable'>Count</th>
+            <th>Last Draw Date</th>
+            <th className='disposable'>Days from being winner</th>
+            <th>Freq</th>
+            <th>Hot number</th>
           </tr>
         </thead>
         <tbody>
           {numberStats.map((numStat) => (
-            <tr key={numStat.number} className={getColorForCount(numStat.count)}>
+            <tr key={numStat.number} className={getColorForCount(numStat.hot_number)}>
               <td className={'number'}>{numStat.number}</td>
-              <td>{numStat.count}</td>
+              <td className='disposable'>{numStat.count}</td>
               <td>{numStat.last_draw_date.substring(0, 10)}</td>
+              <td className='disposable'>{numStat.days_from_being_winner}</td>
+              <td>{numStat.freq.toFixed(5)}</td>
+              <td>{numStat.hot_number.toFixed(5)}</td>
             </tr>
           ))}
         </tbody>
