@@ -8,7 +8,7 @@ const NumberPool = () => {
     useEffect(() => {
         const fetchNumberStats = async () => {
         try {
-            const response = await fetch(`http://estebanarrangoiz.com:5000/api/stats/`);
+            const response = await fetch(`https://estebanarrangoiz.com/lotto-max-backend/stats/`);
             if (!response.ok) {
                 throw new Error(`Error fetching stats for numbers`);
             }

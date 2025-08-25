@@ -12,9 +12,9 @@ const App = () => {
     useEffect(() => {
         const fetchWinningNumbers = async () => {
         try {
-            const response = await fetch('http://estebanarrangoiz.com:5000/api/winning-numbers'); // Changed to relative path for better security
+            const response = await fetch('https://estebanarrangoiz.com/lotto-max-backend/winning-numbers'); // Changed to relative path for better security
             if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
             setWinningNumbers(data);
