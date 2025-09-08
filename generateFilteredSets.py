@@ -1,24 +1,34 @@
 import psycopg2
 from itertools import combinations
-from collections import defaultdict
 from psycopg2 import Error
 import logging
-import configparser
 import psycopg2.extras
-from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor
 import os
 from dotenv import load_dotenv
-from typing import List, Tuple, Optional
+from typing import List, Tuple
+from multiprocessing import Manager, Pool
+import math
 
 load_dotenv()
 
 logging.basicConfig(filename='logs/generateFilteredSets.log',
                     filemode='a',
-                    format='%(asctime)s; %(levelname)s; %(message)s',
-                    datefmt='%H:%M:%S',
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+TOTAL_COMBINATIONS = 99884400
+NUM_WORKERS = 3
+MAX_DB_INSERT_BATCH = 1000  # Maximum number of sets to insert in one batch
+WORK_CHUNK_SIZE = 100000  # Size of each chunk for processing
+
+def validate_env_vars():
+    required_vars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT']
+    for var in required_vars:
+        if not os.getenv(var):
+            logger.error(f"Missing required environment variable: {var}")
+            raise EnvironmentError(f"Missing required environment variable: {var}")
 
 def load_historical_sets() -> List[Tuple[str, set]]:
     conn = connect_to_database()
@@ -37,13 +47,14 @@ def match_rule_1(candidate: Tuple[int, ...], winning_set: set) -> bool:
 def match_rule_2(candidate: Tuple[int, ...], winning_set: set) -> bool:
     # Return True if candidate has 4 or more numbers that are +/- 1 of any number in winning_set
     count = 0
+    temp_set = winning_set.copy()  # Use a copy to avoid modifying the original set
     for num in candidate:
-        if num in winning_set:
+        if num in temp_set:
             count += 1
-            winning_set.remove(num)  # Avoid double counting
-        elif (num - 1 in winning_set) or (num + 1 in winning_set):
+            temp_set.remove(num)  # Avoid double counting
+        elif (num - 1 in temp_set) or (num + 1 in temp_set):
             count += 1
-            winning_set.remove(num - 1 if (num - 1 in winning_set) else num + 1)
+            temp_set.remove(num - 1 if (num - 1 in temp_set) else num + 1)
         if count >= 4:
             return True
     return False
@@ -60,8 +71,9 @@ def match_rule_3(candidate: Tuple[int, ...]) -> bool:
     return False
 
 def insert_batch(batch: List[Tuple[int, ...]]) -> None:
-    conn = connect_to_database()
+    conn = None
     try:
+        conn = connect_to_database()
         with conn:
             with conn.cursor() as cur:
                 insert_query = """
@@ -75,23 +87,8 @@ def insert_batch(batch: List[Tuple[int, ...]]) -> None:
     except Exception as e:
         logger.error(f"Error during batch insertion: {e}")
     finally:
-        conn.close()
-
-def read_db_config(filename='config.ini', section='postgresql'):
-    """ Read database configuration from a file """
-    parser = configparser.ConfigParser()
-    parser.read(filename)
-
-    # Get section, default to postgresql
-    db_config = {}
-    if parser.has_section(section):
-        params = parser.items(section)
-        for param in params:
-            db_config[param[0]] = param[1]
-    else:
-        raise Exception(f'Section {section} not found in the {filename} file')
-
-    return db_config
+        if conn:
+            conn.close()
 
 def connect_to_database():
     """Connect to the PostgreSQL database using environment variables."""
@@ -106,19 +103,24 @@ def connect_to_database():
         return conn
     except (Exception, Error) as error:
         logger.error(f"Error while connecting to PostgreSQL: {error}")
-        return None
+        raise
 
-def process_combinations(start, end, historical_sets):
-    """Process a range of combinations and return rejected and accepted sets."""
+def process_chunk(chunk_range, historical_sets):
+    """Process a smaller chunk of combinations."""
+    start, end = chunk_range
     batch_rejected = []
     number_of_accepted_sets = 0
     number_of_rejected_sets_rule_1 = 0
     number_of_rejected_sets_rule_2 = 0
     number_of_rejected_sets_rule_3 = 0
 
-    logger.info('Starting combination generation and filtering for range %d to %d.', start, end)
+    logger.info(f"Processing chunk: {start} to {end}")
+    processed_count = 0
     for candidate in combinations(range(1, 51), 7):
-        if start <= hash(candidate) % 99884400 < end:  # Divide work based on hash
+        if start <= hash(candidate) % TOTAL_COMBINATIONS < end:
+            processed_count += 1
+            if processed_count % 10000 == 0:
+                logger.info(f"Chunk {start}-{end}: Processed {processed_count} combinations so far.")
             for draw_date, winning_set in historical_sets:
                 if match_rule_1(candidate, winning_set):
                     batch_rejected.append(candidate)
@@ -135,38 +137,30 @@ def process_combinations(start, end, historical_sets):
                 else:
                     number_of_accepted_sets += 1
 
-    logger.info('Finished processing range %d to %d. Accepted: %d, Rejected: %d (Rule 1: %d, Rule 2: %d, Rule 3: %d)',
-                start, end, number_of_accepted_sets,
-                number_of_rejected_sets_rule_1 + number_of_rejected_sets_rule_2 + number_of_rejected_sets_rule_3,
-                number_of_rejected_sets_rule_1,
-                number_of_rejected_sets_rule_2,
-                number_of_rejected_sets_rule_3)
+    logger.info(f"Finished chunk: {start} to {end}. Accepted: {number_of_accepted_sets}, Rejected: {len(batch_rejected)}")
     return batch_rejected, number_of_accepted_sets, number_of_rejected_sets_rule_1, number_of_rejected_sets_rule_2, number_of_rejected_sets_rule_3
 
 def main():
     logger.info('Starting filtered set generation process.')
     try:
+        validate_env_vars()
         historical_sets = load_historical_sets()
         logger.info(f'Loaded {len(historical_sets)} historical sets.')
 
-        BATCH_SIZE = 1000
+        total_chunks = math.ceil(TOTAL_COMBINATIONS / WORK_CHUNK_SIZE)
+        chunk_ranges = [(i * WORK_CHUNK_SIZE, min((i + 1) * WORK_CHUNK_SIZE, TOTAL_COMBINATIONS)) for i in range(total_chunks)]
+
         total_accepted = 0
         total_rejected_rule_1 = 0
         total_rejected_rule_2 = 0
         total_rejected_rule_3 = 0
 
-        # Parallel processing
-        with ProcessPoolExecutor() as executor:
-            futures = []
-            num_workers = 2  # Adjust based on your CPU cores
-            step = 99884400 // num_workers
-            for i in range(num_workers):
-                start = i * step
-                end = (i + 1) * step
-                futures.append(executor.submit(process_combinations, start, end, historical_sets))
+        # Use multiprocessing to dynamically assign chunks to workers
+        with Pool(processes=NUM_WORKERS) as pool:
+            results = [pool.apply_async(process_chunk, args=(chunk, historical_sets)) for chunk in chunk_ranges]
 
-            for future in tqdm(futures, total=num_workers):
-                batch_rejected, accepted, rejected_1, rejected_2, rejected_3 = future.result()
+            for result in results:
+                batch_rejected, accepted, rejected_1, rejected_2, rejected_3 = result.get()
                 insert_batch(batch_rejected)
                 total_accepted += accepted
                 total_rejected_rule_1 += rejected_1
