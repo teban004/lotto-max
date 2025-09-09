@@ -70,7 +70,7 @@ def match_rule_3(candidate: Tuple[int, ...]) -> bool:
                 return True
     return False
 
-def insert_batch(batch: List[Tuple[int, ...]]) -> None:
+def insert_batch(batch: List[Tuple[Tuple[int, ...], int, str]]) -> None:
     conn = None
     try:
         conn = connect_to_database()
@@ -78,11 +78,16 @@ def insert_batch(batch: List[Tuple[int, ...]]) -> None:
             with conn.cursor() as cur:
                 insert_query = """
                 INSERT INTO public.filtered_lotto_sets
-                (number1, number2, number3, number4, number5, number6, number7)
+                (number1, number2, number3, number4, number5, number6, number7, rule_matched, matched_draw_date)
                 VALUES %s
                 ON CONFLICT DO NOTHING;
                 """
-                psycopg2.extras.execute_values(cur, insert_query, batch)
+                # Prepare the data for insertion
+                data = [
+                    (*candidate, rule_matched, matched_draw_date)
+                    for candidate, rule_matched, matched_draw_date in batch
+                ]
+                psycopg2.extras.execute_values(cur, insert_query, data)
         logger.info(f"Inserted batch of {len(batch)} sets.")
     except Exception as e:
         logger.error(f"Error during batch insertion: {e}")
@@ -108,7 +113,7 @@ def connect_to_database():
 def process_chunk(chunk_range, historical_sets):
     """Process a smaller chunk of combinations."""
     start, end = chunk_range
-    batch_rejected = []
+    batch_rejected = []  # Store tuples of (candidate, rule_matched, draw_date)
     number_of_accepted_sets = 0
     number_of_rejected_sets_rule_1 = 0
     number_of_rejected_sets_rule_2 = 0
@@ -123,16 +128,16 @@ def process_chunk(chunk_range, historical_sets):
                 logger.info(f"Chunk {start}-{end}: Processed {processed_count} combinations so far.")
             for draw_date, winning_set in historical_sets:
                 if match_rule_1(candidate, winning_set):
-                    batch_rejected.append(candidate)
+                    batch_rejected.append((candidate, 1, draw_date))
                     number_of_rejected_sets_rule_1 += 1
                     break
                 elif match_rule_2(candidate, winning_set):
-                    batch_rejected.append(candidate)
+                    batch_rejected.append((candidate, 2, draw_date))
                     number_of_rejected_sets_rule_2 += 1
                     break
             else:
                 if match_rule_3(candidate):
-                    batch_rejected.append(candidate)
+                    batch_rejected.append((candidate, 3, None))  # No draw date for rule 3
                     number_of_rejected_sets_rule_3 += 1
                 else:
                     number_of_accepted_sets += 1
